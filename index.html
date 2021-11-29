@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+	<head>
+		<meta charset="UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no"
+		/>
+		<title>卫星视锥体</title>
+		<script src="https://cesium.com/downloads/cesiumjs/releases/1.87.1/Build/Cesium/Cesium.js"></script>
+		<link
+			href="https://cesium.com/downloads/cesiumjs/releases/1.87.1/Build/Cesium/Widgets/widgets.css"
+			rel="stylesheet"
+		/>
+		<script src="turf.min.js"></script>
+		<!-- <script src="plugin/computeVertexNormals.js"></script>
+		<script src="plugin/FourPrismGeometry.js"></script>
+		<script src="plugin/CylinderGeometry.js"></script>
+		<script src="plugin/getHeadingPitchRollByOrientation.js"></script> -->
+		<script src="SatelliteCoverageSimulation.js"></script>
+		<style>
+			html,
+			body,
+			#cesiumContainer {
+				width: 100%;
+				height: 100%;
+				margin: 0;
+				padding: 0;
+				overflow: hidden;
+			}
+		</style>
+	</head>
+
+	<body>
+		<div id="cesiumContainer"></div>
+
+		<script>
+			// let osm = Cesium.createOpenStreetMapImageryProvider({
+			// 	url: 'https://a.tile.openstreetmap.org/',
+			// })
+			let viewer = new Cesium.Viewer('cesiumContainer', {
+				// imageryProvider: osm,
+				shouldAnimate: true,
+				// 设置地图
+				// imageryProvider: TDL_YX,
+				// terrainProvider: Cesium.createWorldTerrain(),
+				imageryProvider: new Cesium.UrlTemplateImageryProvider({url: 'https://webst02.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}'}),
+
+			})
+
+			//取消双击事件
+			viewer.cesiumWidget.screenSpaceEventHandler.removeInputAction(
+				Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK
+			)
+			//设置homebutton的位置
+			Cesium.Camera.DEFAULT_VIEW_RECTANGLE = Cesium.Rectangle.fromDegrees(
+				110.15,
+				34.54,
+				110.25,
+				34.56
+			) //Rectangle(west, south, east, north)
+			//设置初始位置
+			//开启深度检测
+			//viewer.scene.globe.depthTestAgainstTerrain = true;
+			function _update() {
+				return Cesium.Cartesian3.fromDegrees(117.224, 31.819, 100000)
+			}
+			const satelliteNames = ['Satellite/tianhe', 'Satellite/YINHE-1']
+			const satelliteAll = []
+			viewer.dataSources
+				.add(Cesium.CzmlDataSource.load('data.czml'))
+				.then((dataSource) => {
+					for (let i = 0; i < satelliteNames.length; i++) {
+						satelliteAll.push(dataSource.entities.getById(satelliteNames[i]))
+					}
+
+					for (let i = 0; i < satelliteAll.length; i++) {
+						let _update = function () {
+							let positions1 = satelliteAll[i].position.getValue(
+								viewer.clock.currentTime
+							)
+							let cartographic =
+								viewer.scene.globe.ellipsoid.cartesianToCartographic(positions1)
+							let lat = Cesium.Math.toDegrees(cartographic.latitude)
+							let lng = Cesium.Math.toDegrees(cartographic.longitude)
+							let hei = parseFloat(cartographic.height)
+							return Cesium.Cartesian3.fromDegrees(lng, lat, hei)
+						}
+						// Cesium.SatelliteCoverageSimulation =  window.SatelliteCoverageSimulation
+						new SatelliteCoverageSimulation(viewer, {
+							position: new Cesium.CallbackProperty(_update, false),
+							angle1: 40,
+							angle2: 20,
+							areaType: 2,
+							rotation: {
+								heading: Cesium.Math.toRadians(0),
+								pitch: Cesium.Math.toRadians(0),
+								roll: Cesium.Math.toRadians(0),
+							},
+							color: {
+								red: 0.43137254901960786,
+								green: 0.9607843137254902,
+								blue: 0,
+								alpha: 0.8,
+							},
+						})
+						// satelliteCoverageSimulationMap[i].angle1 = 99
+					}
+				})
+		</script>
+	</body>
+</html>
